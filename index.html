@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <!-- 百度统计跟踪代码 -->
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?e11a3132e08f99b985a1b568944a0151";
+      try {
+        // 直接添加到head标签
+        if (document.head) {
+          document.head.appendChild(hm);
+        }
+      } catch (e) {
+        // 忽略错误，确保页面正常加载
+      }
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数据管理诊断平台</title>
+  <!-- 外部资源引入 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+  <style>
+    /* 自定义滚动条样式 */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    
+    /* 响应式字体工具类扩展 */
+    .text-responsive {
+        font-size: clamp(0.875rem, 2vw, 1.25rem);
+    }
+    .text-responsive-lg {
+        font-size: clamp(1rem, 3vw, 1.5rem);
+    }
+    .text-responsive-xl {
+        font-size: clamp(1.25rem, 4vw, 2rem);
+    }
+  </style>
+  
+  <!-- Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#165DFF',
+            secondary: '#36CFC9',
+            success: '#52C41A',
+            warning: '#FAAD14',
+            danger: '#FF4D4F',
+            info: '#1890FF',
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .card-shadow { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); }
+      .hover-lift { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+      .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12); }
+      .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+
+<body class="font-inter bg-gray-50 min-h-screen flex flex-col">
+  <!-- 顶部导航 -->
+  <header class="bg-white shadow-sm sticky top-0 z-50">
+    <div class="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+          <i class="fa fa-bar-chart text-white text-xl"></i>
+        </div>
+        <h1 class="text-xl font-semibold text-primary">数据管理诊断平台</h1>
+      </div>
+      <div class="flex items-center space-x-4">
+        <span class="text-gray-600">管理员</span>
+        <img src="https://picsum.photos/id/1005/200/200" alt="用户头像" class="w-8 h-8 rounded-full">
+      </div>
+    </div>
+  </header>
+
+  <!-- 主要内容 -->
+  <main class="flex-1 container mx-auto px-4 py-4 sm:py-6">
+    <!-- 页面标题与操作 -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+      <div>
+        <h2 class="text-responsive-lg font-bold">数据诊断中心</h2>
+        <p class="text-responsive text-gray-500 mt-1">输入门店数据，生成专业诊断报告</p>
+      </div>
+      <div class="flex gap-3 mt-4 md:mt-0">
+        <button id="resetBtn" class="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+          <i class="fa fa-refresh mr-2"></i>重置
+        </button>
+        <button id="generateReportBtn" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+          <i class="fa fa-file-text-o mr-2"></i>生成诊断报告
+        </button>
+      </div>
+    </div>
+
+    <!-- 筛选条件 -->
+    <div class="bg-white rounded-xl p-4 sm:p-5 card-shadow mb-6 max-w-full">
+      <h3 class="font-semibold text-responsive-lg mb-4">筛选条件</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">门店层级</label>
+          <select id="storeLevel" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+            <option value="SS">SS级（≥5000条线索）</option>
+            <option value="S" selected>S级（3000-4999条线索）</option>
+            <option value="A">A级（1000-2999条线索）</option>
+            <option value="B">B级（500-999条线索）</option>
+            <option value="C">C级（300-499条线索）</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">车价范围</label>
+          <select id="priceRange" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+            <option value="mainstream" selected>主流级（10-20万）</option>
+            <option value="entry">入门级（10万以下）</option>
+            <option value="midHigh">中高端（20-30万）</option>
+            <option value="highEnd">高端级（30万以上）</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">统计周期</label>
+          <select id="statPeriod" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+            <option value="month" selected>近一个月</option>
+            <option value="week">近一周</option>
+            <option value="quarter">近一季度</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 数据输入区域 -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <!-- 经营指标 -->
+      <div class="bg-white rounded-xl p-4 sm:p-5 card-shadow hover-lift max-w-full">
+        <h3 class="font-semibold text-responsive-lg mb-4 flex items-center">
+          <i class="fa fa-line-chart text-primary mr-2"></i>经营指标输入
+        </h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">有效线索量（条）</label>
+            <input type="number" id="线索量" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" value="3500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">到店量（条）</label>
+            <input type="number" id="到店量" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" value="280">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">成交数量（台）</label>
+            <input type="number" id="成交数量" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" value="85">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">平均成交金额（万元）</label>
+            <input type="number" step="0.1" id="成交金额" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" value="18.5">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">营销投入（万元）</label>
+            <input type="number" step="0.1" id="营销投入" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" value="25.8">
+          </div>
+        </div>
+      </div>
+
+      <!-- 转化效率 -->
+      <div class="bg-white rounded-xl p-4 sm:p-5 card-shadow hover-lift max-w-full">
+        <h3 class="font-semibold text-responsive-lg mb-4 flex items-center">
+          <i class="fa fa-exchange text-info mr-2"></i>转化效率输入
+        </h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">直播转化率（%）</label>
+            <input type="number" step="0.1" id="直播转化率" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" value="2.3">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">短视频CPL（元）</label>
+            <input type="number" id="短视频CPL" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" value="68">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">直播线索占比（%）</label>
+            <input type="number" step="0.1" id="直播线索占比" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" value="52">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">私信留资率（%）</label>
+            <input type="number" step="0.1" id="私信留资率" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" value="28">
+          </div>
+        </div>
+      </div>
+
+      <!-- 团队能力 -->
+      <div class="bg-white rounded-xl p-4 sm:p-5 card-shadow hover-lift max-w-full">
+        <h3 class="font-semibold text-responsive-lg mb-4 flex items-center">
+          <i class="fa fa-users text-warning mr-2"></i>团队能力输入
+        </h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">团队总人数（人）</label>
+            <input type="number" id="团队总人数" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" value="7">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">专职新媒体人数（人）</label>
+            <input type="number" id="专职人数" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" value="3">
+          </div>
+          <div class="p-3 bg-gray-50 rounded-lg text-xs text-gray-500">
+            <i class="fa fa-info-circle text-primary mr-1"></i>
+            专职人员指负责直播、短视频、线索跟进的专属员工
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 数据概览卡片 -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 mb-6">
+      <div class="bg-white rounded-xl p-4 sm:p-5 card-shadow flex flex-col justify-between">
+        <p class="text-gray-500 text-sm">到店率</p>
+        <h3 id="到店率显示" class="text-responsive-lg font-bold mt-1">8.0%</h3>
+        <p id="到店率状态" class="text-sm mt-2 text-danger flex items-center">
+          <i class="fa fa-arrow-down mr-1"></i>未达标（标准: 7.0%）
+        </p>
+      </div>
+      <div class="bg-white rounded-xl p-4 sm:p-5 card-shadow flex flex-col justify-between">
+        <p class="text-gray-500 text-sm">线索成交率</p>
+        <h3 id="线索成交率显示" class="text-responsive-lg font-bold mt-1">2.4%</h3>
+        <p id="线索成交率状态" class="text-sm mt-2 text-danger flex items-center">
+          <i class="fa fa-arrow-down mr-1"></i>未达标（标准: 3.0%）
+        </p>
+      </div>
+      <div class="bg-white rounded-xl p-4 sm:p-5 card-shadow flex flex-col justify-between">
+        <p class="text-gray-500 text-sm">总成交金额</p>
+        <h3 id="总成交金额显示" class="text-responsive-lg font-bold mt-1">1572.5</h3>
+        <p class="text-gray-500 text-sm mt-2">万元</p>
+      </div>
+      <div class="bg-white rounded-xl p-4 sm:p-5 card-shadow flex flex-col justify-between">
+        <p class="text-gray-500 text-sm">综合CPL</p>
+        <h3 id="综合CPL显示" class="text-responsive-lg font-bold mt-1">73.7元</h3>
+        <p id="综合CPL状态" class="text-sm mt-2 text-primary flex items-center">
+          <i class="fa fa-check mr-1"></i>良好（行业平均: 80.0元）
+        </p>
+      </div>
+      <div class="bg-white rounded-xl p-4 sm:p-5 card-shadow flex flex-col justify-between">
+        <p class="text-gray-500 text-sm">专职人员占比</p>
+        <h3 id="专职占比显示" class="text-responsive-lg font-bold mt-1">42.9%</h3>
+        <p id="专职占比状态" class="text-sm mt-2 text-danger flex items-center">
+          <i class="fa fa-arrow-down mr-1"></i>未达标（标准: 65.0%）
+        </p>
+      </div>
+    </div>
+
+    <!-- 图表区域 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <!-- 转化率趋势图 -->
+      <div class="bg-white rounded-xl p-4 sm:p-5 card-shadow max-w-full">
+        <h3 class="font-semibold text-responsive-lg mb-4">转化率趋势</h3>
+        <div class="h-64 sm:h-72">
+          <canvas id="conversionChart"></canvas>
+        </div>
+      </div>
+      <!-- 投入产出图 -->
+      <div class="bg-white rounded-xl p-4 sm:p-5 card-shadow max-w-full">
+        <h3 class="font-semibold text-responsive-lg mb-4">投入产出分析</h3>
+        <div class="h-64 sm:h-72">
+          <canvas id="roiChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 诊断报告区域（默认隐藏） -->
+    <div id="reportSection" class="hidden bg-white rounded-xl card-shadow overflow-hidden mb-6">
+      <div class="p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-primary/5 to-primary/10">
+        <h3 class="font-bold text-responsive-xl flex items-center">
+          <i class="fa fa-file-text text-primary mr-2"></i>数据诊断报告
+        </h3>
+        <p class="text-responsive text-gray-500 mt-1">
+          <span id="reportPeriod">近一个月</span> · <span id="reportStoreLevel">S级门店</span> · <span id="reportPriceRange">主流级（10-20万）</span>
+        </p>
+      </div>
+
+      <!-- 报告内容 -->
+      <div class="p-4 sm:p-6 space-y-8">
+        <!-- 综合评分 -->
+        <div>
+          <h4 class="font-semibold text-responsive-lg mb-4">综合评分</h4>
+          <div class="flex items-center">
+            <div class="w-24 h-24 rounded-full border-8 border-primary flex items-center justify-center text-3xl font-bold" id="overallScore">68</div>
+            <div class="ml-6">
+              <div class="flex items-center mb-2">
+                <span class="text-gray-700 mr-2">综合表现：</span>
+                <span id="performanceLevel" class="px-2 py-1 rounded-full bg-warning/10 text-warning text-sm">合格</span>
+              </div>
+              <p class="text-gray-600" id="performanceDesc">整体基本达标，但3项核心指标未达到S级门店标准，需针对性优化。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 诊断意见（维度总结） -->
+        <div>
+          <h4 class="font-semibold text-lg mb-4">一、核心诊断意见</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
+              <h5 class="font-medium text-primary mb-2">经营指标诊断</h5>
+              <p id="operationSummary" class="text-gray-600 text-sm">
+                线索量充足（3500条），达到S级门店标准；到店转化率良好（8.0%），高于S级标准（7.0%）。
+              </p>
+            </div>
+            <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
+              <h5 class="font-medium text-primary mb-2">转化效率诊断</h5>
+              <p id="conversionSummary" class="text-gray-600 text-sm">
+                线索成交率偏低（2.4%），未达到S级标准（需3.0%以上）；直播线索占比不足（52.0%），低于S级标准（需60.0%以上）。
+              </p>
+            </div>
+            <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
+              <h5 class="font-medium text-primary mb-2">投入产出诊断</h5>
+              <p id="roiSummary" class="text-gray-600 text-sm">
+                投入产出比表现一般（61.0:1），有提升空间；本期实现毛利润283.1万元，毛利率约18%；综合获客成本为73.7元/条，低于行业平均水平（80元），获客效率良好。
+              </p>
+            </div>
+            <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
+              <h5 class="font-medium text-primary mb-2">团队能力诊断</h5>
+              <p id="teamSummary" class="text-gray-600 text-sm">
+                团队规模达标（7人），满足S级门店运营需求；专职人员占比偏低（42.9%），未达到S级标准（需65.0%以上）。
+              </p>
+            </div>
+          </div>
+
+          <!-- 核心问题 -->
+          <div class="p-4 bg-primary/5 rounded-lg border border-primary/20">
+            <h5 class="font-medium text-primary mb-2">核心问题方向</h5>
+            <p id="keyIssues" class="text-gray-600">
+              线索成交转化不足，需提升产品展示和销售话术；直播渠道利用不充分，需增加直播频次和优化直播内容；专职新媒体人员占比不足（42.9%），影响运营专业性和稳定性。
+            </p>
+          </div>
+        </div>
+
+        <!-- 改善措施（核心指标） -->
+        <div>
+          <h4 class="font-semibold text-lg mb-4">二、核心指标改善措施</h4>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">未达标指标</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">投入（万元）</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">改善动作</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">预期效果</th>
+                </tr>
+              </thead>
+              <tbody id="roiModelTable" class="bg-white divide-y divide-gray-200">
+                <!-- 改善措施内容 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 分模块改善措施 -->
+        <div>
+          <h4 class="font-semibold text-lg mb-4">三、分模块改善方案</h4>
+          
+          <!-- 直播优化模块 -->
+          <div class="border border-gray-200 rounded-xl overflow-hidden mb-6">
+            <div class="px-6 py-4 border-b border-gray-200 bg-primary/5">
+              <h5 class="font-medium text-lg flex items-center">
+                <i class="fa fa-video-camera text-primary mr-2"></i>直播优化模块
+                <span id="liveStatusBadge" class="ml-3 px-2 py-0.5 rounded-full text-xs bg-danger/10 text-danger">部分达标（1/2）</span>
+              </h5>
+            </div>
+            <div class="p-5">
+              <div class="flex flex-wrap gap-4 mb-5">
+                <div class="flex items-center">
+                  <span class="text-sm text-gray-500 mr-2">直播转化率：</span>
+                  <span class="text-sm font-medium">2.3%</span>
+                  <span class="ml-2 px-1.5 py-0.5 rounded text-xs bg-success/10 text-success">达标</span>
+                </div>
+                <div class="flex items-center">
+                  <span class="text-sm text-gray-500 mr-2">直播线索占比：</span>
+                  <span class="text-sm font-medium">52.0%</span>
+                  <span class="ml-2 px-1.5 py-0.5 rounded text-xs bg-danger/10 text-danger">未达标</span>
+                </div>
+              </div>
+              
+              <!-- 改善动作 -->
+              <div id="liveImprovementActions" class="mb-6 space-y-3">
+                <div class="p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <h6 class="font-medium text-gray-800 mb-2">直播线索占比提升动作</h6>
+                  <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
+                    <li>增加直播频次至每周4次（原2次），固定工作日12:30-13:30、周末10:00/15:00/19:30开播</li>
+                    <li>直播前1天发布预告短视频，突出"直播专属底价"福利，开播前30分钟投100元DOU+定向本地潜客</li>
+                    <li>每周1次邀请已购车客户出镜分享，强化信任背书，提升留资意愿</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <!-- 案例参考 -->
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h6 class="font-medium text-gray-800 mb-3">标杆案例参考</h6>
+                <p class="text-sm text-gray-600">
+                  成都某A级经销商通过增加直播频次至每周4次，同步优化预告引流，1个月内直播线索占比从45%提升至58%，单场平均线索量从35条增至62条。
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 运营管理模块 -->
+          <div class="border border-gray-200 rounded-xl overflow-hidden mb-6">
+            <div class="px-6 py-4 border-b border-gray-200 bg-warning/5">
+              <h5 class="font-medium text-lg flex items-center">
+                <i class="fa fa-cogs text-warning mr-2"></i>运营管理模块
+                <span id="opStatusBadge" class="ml-3 px-2 py-0.5 rounded-full text-xs bg-danger/10 text-danger">部分达标（1/3）</span>
+              </h5>
+            </div>
+            <div class="p-5">
+              <div class="flex flex-wrap gap-4 mb-5">
+                <div class="flex items-center">
+                  <span class="text-sm text-gray-500 mr-2">到店率：</span>
+                  <span class="text-sm font-medium">8.0%</span>
+                  <span class="ml-2 px-1.5 py-0.5 rounded text-xs bg-success/10 text-success">达标</span>
+                </div>
+                <div class="flex items-center">
+                  <span class="text-sm text-gray-500 mr-2">线索成交率：</span>
+                  <span class="text-sm font-medium">2.4%</span>
+                  <span class="ml-2 px-1.5 py-0.5 rounded text-xs bg-danger/10 text-danger">未达标</span>
+                </div>
+                <div class="flex items-center">
+                  <span class="text-sm text-gray-500 mr-2">专职人员占比：</span>
+                  <span class="text-sm font-medium">42.9%</span>
+                  <span class="ml-2 px-1.5 py-0.5 rounded text-xs bg-danger/10 text-danger">未达标</span>
+                </div>
+              </div>
+              
+              <!-- 改善动作 -->
+              <div id="opImprovementActions" class="mb-6 space-y-3">
+                <div class="p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <h6 class="font-medium text-gray-800 mb-2">线索成交率提升动作</h6>
+                  <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
+                    <li>优化试驾流程：设计30分钟深度试驾路线（含城市道路+快速路），途中重点讲解智能驾驶、隔音效果等核心功能</li>
+                    <li>销售话术培训：整理竞品对比手册，培训销售顾问针对"价格异议"的标准应答（如"同配置比竞品多3项安全配置"）</li>
+                    <li>议价权限调整：给予销售顾问5000元内自主议价权，减少客户等待决策时间</li>
+                  </ul>
+                </div>
+                <div class="p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <h6 class="font-medium text-gray-800 mb-2">专职人员配置动作</h6>
+                  <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
+                    <li>从现有销售团队选拔2名熟悉短视频/直播的员工，转岗为专职新媒体运营，给予每月1500元岗位补贴</li>
+                    <li>制定《专职新媒体岗工作清单》：每日1条短视频、每周3场直播、线索2小时内响应</li>
+                    <li>考核激励：将直播线索量、短视频CPL纳入绩效考核，CPL低于60元每条奖励200元</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <!-- 案例参考 -->
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h6 class="font-medium text-gray-800 mb-3">标杆案例参考</h6>
+                <p class="text-sm text-gray-600">
+                  南京某A级经销商将2名销售转为专职新媒体岗，明确职责并配套考核激励，1个月内直播线索占比从35%提升至52%，线索响应时间从4小时缩短至1.5小时，线索成交率提升0.8个百分点。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 报告操作区 -->
+      <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+        <button class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+          <i class="fa fa-download mr-2"></i>下载报告
+        </button>
+        <button class="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+          <i class="fa fa-print mr-2"></i>打印报告
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="bg-white border-t border-gray-200 py-6 mt-8">
+    <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
+      © 2025 数据管理诊断平台 保留所有权利
+    </div>
+  </footer>
+
+  <!-- JavaScript 核心逻辑 -->
+  <script>
+    // 1. 基础配置：各层级门店指标标准值
+    const levelStandards = {
+      到店率: { SS: 10, S: 7, A: 5, B: 3, C: 3 },
+      线索成交率: { SS: 3.5, S: 3, A: 2.5, B: 2, C: 2 },
+      直播转化率: { SS: 1.5, S: 2, A: 2.5, B: 3, C: 3.5 },
+      短视频CPL: { SS: 50, S: 60, A: 70, B: 80, C: 90 },
+      直播线索占比: { SS: 70, S: 60, A: 50, B: 40, C: 30 },
+      私信留资率: { SS: 20, S: 30, A: 30, B: 35, C: 35 },
+      团队总人数: { SS: 8, S: 6, A: 4, B: 3, C: 2 },
+      专职占比: { SS: 70, S: 65, A: 60, B: 55, C: 50 }
+    };
+
+    // 2. 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      // 初始化图表（带默认数据）
+      initCharts();
+      // 绑定按钮事件
+      document.getElementById('generateReportBtn').addEventListener('click', generateReport);
+      // 添加预设随机数据按钮
+      const randomBtn = document.createElement('button');
+      randomBtn.id = 'randomDataBtn';
+      randomBtn.className = 'px-6 py-3 bg-secondary text-white rounded-lg flex items-center justify-center hover:bg-secondary/90 transition-colors shadow-lg mx-2';
+      randomBtn.innerHTML = '<i class="fa fa-random mr-2"></i>预设随机数据';
+      randomBtn.addEventListener('click', setRandomData);
+      const reportBtn = document.getElementById('generateReportBtn');
+      reportBtn.parentNode.insertBefore(randomBtn, reportBtn.nextSibling);
+      // 重置按钮
+      document.getElementById('resetBtn').addEventListener('click', resetForm);
+      // 监听输入变化，实时更新数据和图表
+      const inputs = document.querySelectorAll('input[type="number"]');
+      inputs.forEach(input => input.addEventListener('input', updateOverview));
+      // 初始加载时更新数据
+      updateOverview();
+    });
+
+    // 3. 图表初始化（默认数据+自动关联计算）
+    function initCharts() {
+      if (typeof Chart === 'undefined') { console.error('Chart.js未加载'); return; }
+      if (typeof ChartDataLabels === 'undefined') { 
+        console.log('ChartDataLabels插件未加载，将使用Chart.js内置功能显示数据标签'); 
+      }
+
+      // 3.1 转化率趋势图（默认数据：四周波动）
+      const conversionCtx = document.getElementById('conversionChart').getContext('2d');
+      window.conversionChart = new Chart(conversionCtx, {
+        type: 'line',
+        data: {
+          labels: ['第1周', '第2周', '第3周', '第4周'],
+          datasets: [
+            { label: '到店率', data: [7.2, 7.5, 7.8, 8.0], borderColor: '#165DFF', tension: 0.4, fill: false },
+            { label: '成交率', data: [2.1, 2.2, 2.3, 2.4], borderColor: '#52C41A', tension: 0.4, fill: false }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            // 确保数据标签默认显示
+            tooltip: {
+              enabled: true
+            },
+            legend: {
+              display: true
+            },
+            // 使用Chart.js内置的数据标签功能
+            datalabels: {
+              display: true,
+              align: 'top',
+              formatter: function(value) {
+                return `${value}%`;
+              },
+              color: function(context) {
+                return context.dataset.borderColor;
+              },
+              font: {
+                weight: 'bold',
+                size: 12
+              },
+              padding: 5
+            }
+          },
+          scales: { 
+            y: { 
+              beginAtZero: true, 
+              title: { 
+                display: true, 
+                text: '百分比 (%)' 
+              } 
+            } 
+          }
+        }
+      });
+
+      // 3.2 投入产出图（饼图，显示营销投入、毛利润和ROI比例）
+      const roiCtx = document.getElementById('roiChart').getContext('2d');
+      window.roiChart = new Chart(roiCtx, {
+        type: 'pie',
+        data: {
+          labels: ['营销投入', '毛利润'],
+          datasets: [{
+            label: '投入产出分析',
+            data: [25.8, 283.1],
+            backgroundColor: ['#FAAD14', '#165DFF'],
+            borderColor: ['#fff', '#fff'],
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                padding: 20,
+                font: {
+                  size: 14
+                }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const label = context.label || '';
+                  const value = context.raw || 0;
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = ((value / total) * 100).toFixed(1);
+                  const roi = ((context.dataset.data[1] - context.dataset.data[0]) / context.dataset.data[0]).toFixed(1);
+                  
+                  if (label === '毛利润') {
+                    return `${label}: ${value}万元 (${percentage}%)\nROI: ${roi}:1`;
+                  }
+                  return `${label}: ${value}万元 (${percentage}%)`;
+                }
+              }
+            },
+            // 使用Chart.js内置的数据标签功能
+            datalabels: {
+              display: true,
+              formatter: function(value, context) {
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return `${value}万元\n(${percentage}%)`;
+              },
+              color: '#fff',
+              font: {
+                weight: 'bold',
+                size: 14
+              },
+              padding: 10
+            }
+          }
+        }
+      });
+
+
+      
+
+    }
+
+    // 4. 实时更新概览数据和图表
+    function updateOverview() {
+      // 4.1 获取输入数据
+      const 线索量 = parseFloat(document.getElementById('线索量').value) || 0;
+      const 到店量 = parseFloat(document.getElementById('到店量').value) || 0;
+      const 成交数量 = parseFloat(document.getElementById('成交数量').value) || 0;
+      const 成交金额 = parseFloat(document.getElementById('成交金额').value) || 0;
+      const 营销投入 = parseFloat(document.getElementById('营销投入').value) || 0;
+      const 短视频CPL = parseFloat(document.getElementById('短视频CPL').value) || 0;
+      const 团队总人数 = parseFloat(document.getElementById('团队总人数').value) || 0;
+      const 专职人数 = parseFloat(document.getElementById('专职人数').value) || 0;
+      const storeLevel = document.getElementById('storeLevel').value;
+
+      // 4.2 计算核心指标
+      const 到店率 = 线索量 > 0 ? (到店量 / 线索量 * 100).toFixed(1) : 0;
+      const 线索成交率 = 线索量 > 0 ? (成交数量 / 线索量 * 100).toFixed(1) : 0;
+      const 总成交金额 = (成交数量 * 成交金额).toFixed(1);
+      const 综合CPL = 线索量 > 0 && 营销投入 > 0 ? (营销投入 * 10000 / 线索量).toFixed(1) : 0;
+      const 专职占比 = 团队总人数 > 0 ? (专职人数 / 团队总人数 * 100).toFixed(1) : 0;
+      
+      // 改进的毛利润计算：基于车辆售价的阶梯式毛利率（增加6%基础率）
+      let 毛利率 = 0.06; // 基础毛利率6%
+      // 根据车辆售价设置不同的毛利率
+      if (成交金额 < 10) {
+        毛利率 = 0.10; // 10万以下：10%
+      } else if (成交金额 >= 10 && 成交金额 < 20) {
+        毛利率 = 0.12; // 10-20万：12%
+      } else if (成交金额 >= 20 && 成交金额 < 30) {
+        毛利率 = 0.15; // 20-30万：15%
+      } else if (成交金额 >= 30) {
+        毛利率 = 0.18; // 30万以上：18%
+      }
+      const 毛利润 = (总成交金额 * 毛利率).toFixed(1);
+
+      // 4.3 更新概览卡片
+      document.getElementById('到店率显示').textContent = 到店率 + '%';
+      document.getElementById('线索成交率显示').textContent = 线索成交率 + '%';
+      document.getElementById('总成交金额显示').textContent = 总成交金额;
+      document.getElementById('综合CPL显示').textContent = 综合CPL + '元';
+      document.getElementById('专职占比显示').textContent = 专职占比 + '%';
+
+      // 4.4 更新指标状态（达标/未达标）
+      updateIndicatorStatus('到店率', 到店率, levelStandards.到店率[storeLevel]);
+      updateIndicatorStatus('线索成交率', 线索成交率, levelStandards.线索成交率[storeLevel]);
+      updateIndicatorStatus('综合CPL', 综合CPL, { SS: 60, S: 80, A: 100, B: 120, C: 150 }[storeLevel], 'lower');
+      updateIndicatorStatus('专职占比', 专职占比, levelStandards.专职占比[storeLevel]);
+
+      // 4.5 更新图表数据（自动关联计算结果）
+      
+      // 更新其他图表（如果存在）
+      if (window.conversionChart && typeof window.conversionChart.update === 'function') {
+        try {
+          // 转化率趋势图：模拟四周波动（基于当前到店率/成交率）
+          const safe到店率 = parseFloat(到店率) || 0;
+          const safe线索成交率 = parseFloat(线索成交率) || 0;
+          
+          // 安全地更新数据
+          if (window.conversionChart.data && 
+              window.conversionChart.data.datasets && 
+              window.conversionChart.data.datasets[0] && 
+              window.conversionChart.data.datasets[1]) {
+            window.conversionChart.data.datasets[0].data = [
+              (safe到店率 * 0.9).toFixed(1), (safe到店率 * 0.95).toFixed(1), (safe到店率 * 0.98).toFixed(1), safe到店率.toFixed(1)
+            ];
+            window.conversionChart.data.datasets[1].data = [
+              (safe线索成交率 * 0.88).toFixed(1), (safe线索成交率 * 0.92).toFixed(1), (safe线索成交率 * 0.96).toFixed(1), safe线索成交率.toFixed(1)
+            ];
+          }
+          
+          // 确保数据标签在更新时显示
+          if (window.conversionChart.options && 
+              window.conversionChart.options.plugins && 
+              window.conversionChart.options.plugins.tooltip) {
+            window.conversionChart.options.plugins.tooltip.enabled = true;
+          }
+          
+          window.conversionChart.update();
+        } catch (error) {
+          console.log('更新conversionChart时出错:', error);
+        }
+      }
+
+      if (window.roiChart) {
+        // 投入产出饼图：营销投入+毛利润
+        const safe营销投入 = parseFloat(营销投入.toFixed(1)) || 0;
+        const safe毛利润 = parseFloat(毛利润) || 0;
+        window.roiChart.data.datasets[0].data = [safe营销投入, safe毛利润];
+        // 确保数据标签在更新时显示
+        window.roiChart.update();
+      }
+
+
+    }
+
+    // 5. 更新指标状态（达标/未达标判断）
+    function updateIndicatorStatus(id, value, standard, type = 'higher') {
+      const statusEl = document.getElementById(id + '状态');
+      let statusText, statusClass, icon;
+      value = parseFloat(value);
+      standard = parseFloat(standard);
+
+      if (type === 'higher') {
+        // 越高越好（到店率、成交率等）
+        if (value >= standard) {
+          statusText = '达标'; statusClass = 'text-success'; icon = 'fa-arrow-up';
+        } else {
+          statusText = '未达标'; statusClass = 'text-danger'; icon = 'fa-arrow-down';
+        }
+      } else {
+        // 越低越好（CPL成本）
+        if (value === 0) {
+          statusText = '待计算'; statusClass = 'text-gray-500'; icon = 'fa-minus';
+        } else if (value < standard * 0.8) {
+          statusText = '优秀'; statusClass = 'text-success'; icon = 'fa-arrow-down';
+        } else if (value < standard) {
+          statusText = '良好'; statusClass = 'text-primary'; icon = 'fa-check';
+        } else {
+          statusText = '偏高'; statusClass = 'text-danger'; icon = 'fa-arrow-up';
+        }
+      }
+
+      statusEl.innerHTML = `<i class="fa ${icon} mr-1 ${statusClass}"></i><span class="${statusClass}">${statusText}（标准: ${standard}${id === '综合CPL' ? '元' : '%'}）</span>`;
+    }
+
+    // 6. 生成诊断报告（默认隐藏→点击显示）
+    function generateReport() {
+      // 6.1 显示报告区域
+      const reportSection = document.getElementById('reportSection');
+      reportSection.classList.remove('hidden');
+      reportSection.scrollIntoView({ behavior: 'smooth' });
+
+      // 6.2 更新报告基础信息
+      const storeLevel = document.getElementById('storeLevel');
+      const priceRange = document.getElementById('priceRange');
+      const statPeriod = document.getElementById('statPeriod');
+      document.getElementById('reportStoreLevel').textContent = storeLevel.options[storeLevel.selectedIndex].text;
+      document.getElementById('reportPriceRange').textContent = priceRange.options[priceRange.selectedIndex].text;
+      document.getElementById('reportPeriod').textContent = statPeriod.options[statPeriod.selectedIndex].text;
+
+      // 6.3 计算综合评分
+      calculateOverallScore();
+
+      // 6.4 生成诊断意见（维度总结）
+      generateDimensionSummary();
+
+      // 6.5 生成核心改善措施表格
+      generateImprovementTable();
+    }
+
+    // 7. 计算综合评分
+    function calculateOverallScore() {
+      const storeLevel = document.getElementById('storeLevel').value;
+      const 线索量 = parseFloat(document.getElementById('线索量').value) || 0;
+      const 到店量 = parseFloat(document.getElementById('到店量').value) || 0;
+      const 成交数量 = parseFloat(document.getElementById('成交数量').value) || 0;
+      const 直播线索占比 = parseFloat(document.getElementById('直播线索占比').value) || 0;
+      const 直播转化率 = parseFloat(document.getElementById('直播转化率').value) || 0;
+      const 短视频CPL = parseFloat(document.getElementById('短视频CPL').value) || 0;
+      const 私信留资率 = parseFloat(document.getElementById('私信留资率').value) || 0;
+      const 团队总人数 = parseFloat(document.getElementById('团队总人数').value) || 0;
+      const 专职人数 = parseFloat(document.getElementById('专职人数').value) || 0;
+      const 营销投入 = parseFloat(document.getElementById('营销投入').value) || 0;
+
+      // 计算各指标得分（0-100分）
+      const scores = {
+        到店率: calcScore((到店量/线索量*100), levelStandards.到店率[storeLevel], 'higher'),
+        线索成交率: calcScore((成交数量/线索量*100), levelStandards.线索成交率[storeLevel], 'higher'),
+        直播线索占比: calcScore(直播线索占比, levelStandards.直播线索占比[storeLevel], 'higher'),
+        直播转化率: calcScore(直播转化率, levelStandards.直播转化率[storeLevel], 'higher'),
+        短视频CPL: calcScore(短视频CPL, levelStandards.短视频CPL[storeLevel], 'lower'),
+        综合CPL: calcScore((营销投入*10000/线索量), { SS:60,S:80,A:100,B:120,C:150 }[storeLevel], 'lower'),
+        私信留资率: calcScore(私信留资率, levelStandards.私信留资率[storeLevel], 'higher'),
+        团队总人数: calcScore(团队总人数, levelStandards.团队总人数[storeLevel], 'higher'),
+        专职占比: calcScore((专职人数/团队总人数*100), levelStandards.专职占比[storeLevel], 'higher')
+      };
+
+      // 加权计算总分（权重根据指标重要性设定）
+      const weights = {
+        到店率: 0.15, 线索成交率: 0.15, 直播线索占比: 0.1, 直播转化率: 0.1,
+        短视频CPL: 0.1, 综合CPL: 0.15, 私信留资率: 0.1, 团队总人数: 0.05, 专职占比: 0.1
+      };
+
+      let totalScore = 0;
+      for (const [key, score] of Object.entries(scores)) {
+        totalScore += score * weights[key];
+      }
+      totalScore = Math.round(totalScore);
+      document.getElementById('overallScore').textContent = totalScore;
+
+      // 设定综合表现评价
+      let levelText, levelDesc, levelClass;
+      if (totalScore >= 90) {
+        levelText = '优秀'; levelDesc = '各项指标均表现优异，远超同层级门店平均水平，建议保持现有策略并探索创新增长点。'; levelClass = 'bg-success/10 text-success';
+      } else if (totalScore >= 70) {
+        levelText = '良好'; levelDesc = '整体表现良好，核心指标达标，但仍有提升空间，建议针对薄弱环节进行优化。'; levelClass = 'bg-primary/10 text-primary';
+      } else if (totalScore >= 60) {
+        levelText = '合格'; levelDesc = '整体基本达标，但多项核心指标未达到同层级门店标准，需针对性优化提升。'; levelClass = 'bg-warning/10 text-warning';
+      } else {
+        levelText = '待改进'; levelDesc = '多项核心指标未达标，低于同层级门店平均水平，需要全面整改提升。'; levelClass = 'bg-danger/10 text-danger';
+      }
+
+      const levelEl = document.getElementById('performanceLevel');
+      levelEl.textContent = levelText;
+      levelEl.className = `px-2 py-1 rounded-full ${levelClass} text-sm`;
+      document.getElementById('performanceDesc').textContent = levelDesc;
+    }
+
+    // 8. 计算单个指标得分（0-100分）
+    function calcScore(actual, standard, type) {
+      actual = parseFloat(actual) || 0;
+      standard = parseFloat(standard) || 0;
+      if (type === 'higher') {
+        // 越高越好：达标得100分，0值得0分，中间按比例计算
+        return actual >= standard ? 100 : (actual <= 0 ? 0 : Math.round((actual / standard) * 100));
+      } else {
+        // 越低越好：达标得100分，0值得100分，中间按比例计算
+        return actual <= standard ? 100 : Math.round((standard / actual) * 100);
+      }
+    }
+
+    // 9. 生成诊断意见（维度总结）
+    function generateDimensionSummary() {
+      const storeLevel = document.getElementById('storeLevel').value;
+      const 线索量 = parseFloat(document.getElementById('线索量').value) || 0;
+      const 到店量 = parseFloat(document.getElementById('到店量').value) || 0;
+      const 成交数量 = parseFloat(document.getElementById('成交数量').value) || 0;
+      const 成交金额 = parseFloat(document.getElementById('成交金额').value) || 0;
+      const 营销投入 = parseFloat(document.getElementById('营销投入').value) || 0;
+      const 直播线索占比 = parseFloat(document.getElementById('直播线索占比').value) || 0;
+      const 团队总人数 = parseFloat(document.getElementById('团队总人数').value) || 0;
+      const 专职人数 = parseFloat(document.getElementById('专职人数').value) || 0;
+
+      // 计算基础数据
+      const 到店率 = (到店量/线索量*100).toFixed(1);
+      const 线索成交率 = (成交数量/线索量*100).toFixed(1);
+      const 总成交金额 = (成交数量*成交金额).toFixed(1);
+      
+      // 阶梯式毛利率计算
+      let 毛利率 = 0.06; // 基础毛利率6%
+      if (成交金额 < 10) {
+        毛利率 = 0.10; // 10万以下：10%
+      } else if (成交金额 >= 10 && 成交金额 < 20) {
+        毛利率 = 0.12; // 10-20万：12%
+      } else if (成交金额 >= 20 && 成交金额 < 30) {
+        毛利率 = 0.15; // 20-30万：15%
+      } else if (成交金额 >= 30) {
+        毛利率 = 0.18; // 30万以上：18%
+      }
+      const 毛利润 = (总成交金额 * 毛利率).toFixed(1);
+      const ROI = 营销投入 > 0 ? (总成交金额/营销投入).toFixed(1) : 0;
+      const 综合CPL = (营销投入*10000/线索量).toFixed(1);
+      const 专职占比 = (专职人数/团队总人数*100).toFixed(1);
+      const 行业平均CPL = { SS:60,S:80,A:100,B:120,C:150 }[storeLevel];
+      const 线索量阈值 = { SS:5000,S:3000,A:1000,B:500,C:300 }[storeLevel];
+
+      // 经营指标诊断
+      document.getElementById('operationSummary').textContent = 
+        `线索量${线索量 >= 线索量阈值 ? '充足' : '不足'}（${线索量}条），${线索量 >= 线索量阈值 ? '达到' : '未达到'}${storeLevel}级门店标准；到店转化率${到店率 >= levelStandards.到店率[storeLevel] ? '良好' : '偏低'}（${到店率}%），${到店率 >= levelStandards.到店率[storeLevel] ? '高于' : '低于'}${storeLevel}级标准（${levelStandards.到店率[storeLevel]}%）。`;
+
+      // 转化效率诊断
+      document.getElementById('conversionSummary').textContent = 
+        `线索成交率${线索成交率 >= levelStandards.线索成交率[storeLevel] ? '表现良好' : '偏低'}（${线索成交率}%），${线索成交率 >= levelStandards.线索成交率[storeLevel] ? '达到' : '未达到'}${storeLevel}级标准（需${levelStandards.线索成交率[storeLevel]}%以上）；直播线索占比${直播线索占比 >= levelStandards.直播线索占比[storeLevel] ? '充足' : '不足'}（${直播线索占比}%），${直播线索占比 >= levelStandards.直播线索占比[storeLevel] ? '达到' : '低于'}${storeLevel}级标准（需${levelStandards.直播线索占比[storeLevel]}%以上）。`;
+
+      // 投入产出诊断
+      document.getElementById('roiSummary').textContent = 
+        `投入产出比表现${ROI >= 5 ? '优秀' : ROI >= 3 ? '一般' : '偏低'}（${ROI}:1），${ROI >= 5 ? '营销资源利用效率高' : ROI >= 3 ? '有提升空间' : '营销资源利用效率不高'}；本期实现毛利润${毛利润}万元，毛利率约18%；综合获客成本为${综合CPL}元/条，${综合CPL < 行业平均CPL ? '低于' : '高于'}行业平均水平（${行业平均CPL}元），${综合CPL < 行业平均CPL ? '获客效率良好' : '需优化获客渠道'}。`;
+
+      // 团队能力诊断
+      document.getElementById('teamSummary').textContent = 
+        `团队规模${团队总人数 >= levelStandards.团队总人数[storeLevel] ? '达标' : '不足'}（${团队总人数}人），${团队总人数 >= levelStandards.团队总人数[storeLevel] ? '满足' : '低于'}${storeLevel}级门店运营需求；专职人员占比${专职占比 >= levelStandards.专职占比[storeLevel] ? '合理' : '偏低'}（${专职占比}%），${专职占比 >= levelStandards.专职占比[storeLevel] ? '达到' : '未达到'}${storeLevel}级标准（需${levelStandards.专职占比[storeLevel]}%以上）。`;
+
+      // 核心问题方向
+      const issues = [];
+      if (线索成交率 < levelStandards.线索成交率[storeLevel]) issues.push('线索成交转化不足，需提升产品展示和销售话术');
+      if (直播线索占比 < levelStandards.直播线索占比[storeLevel]) issues.push('直播渠道利用不充分，需增加直播频次和优化直播内容');
+      if (专职占比 < levelStandards.专职占比[storeLevel]) issues.push(`专职新媒体人员占比不足（${专职占比}%），影响运营专业性和稳定性`);
+      document.getElementById('keyIssues').textContent = issues.length > 0 ? issues.join('；') : '各项指标表现良好，建议持续优化现有策略。';
+      
+      // 生成参考案例（基于诊断问题）
+      setTimeout(function() {
+        // 创建案例容器
+        const reportSection = document.getElementById('reportSection');
+        const reportContent = reportSection.querySelector('.p-4');
+        
+        // 检查是否已存在案例区域
+        let casesContainer = document.getElementById('referenceCases');
+        if (!casesContainer) {
+          // 创建案例区域
+          const casesSection = document.createElement('div');
+          casesSection.className = 'mt-8';
+          casesSection.innerHTML = `
+            <h4 class="font-semibold text-responsive-lg mb-4 flex items-center">
+              <i class="fa fa-lightbulb-o text-warning mr-2"></i>诊断参考案例
+            </h4>
+            <div id="referenceCases" class="bg-gray-50 rounded-lg p-4">
+              <div class="text-center py-4 text-primary">正在搜索相关参考案例...</div>
+            </div>
+          `;
+          reportContent.appendChild(casesSection);
+          casesContainer = document.getElementById('referenceCases');
+        } else {
+          casesContainer.innerHTML = '<div class="text-center py-4 text-primary">正在搜索相关参考案例...</div>';
+        }
+        
+        // 基于问题生成搜索关键词
+        const keywordMap = {
+          '线索成交转化不足': ['汽车销售', '提高成交率', '销售技巧'],
+          '直播渠道利用不充分': ['汽车直播', '提高直播转化率', '直播引流'],
+          '专职新媒体人员占比不足': ['汽车营销团队', '新媒体人员配置', '营销团队建设'],
+          '到店转化率偏低': ['到店转化', '展厅销售', '客户体验']
+        };
+        
+        const keywords = [];
+        issues.forEach(issue => {
+          for (const [key, words] of Object.entries(keywordMap)) {
+            if (issue.includes(key)) {
+              keywords.push(...words);
+            }
+          }
+        });
+        
+        // 如果没有特定关键词，使用通用关键词
+        if (keywords.length === 0) {
+          keywords.push('汽车门店运营优化', '汽车营销最佳实践', '汽车销售提升');
+        }
+        
+        // 去重
+        const uniqueKeywords = [...new Set(keywords)];
+        
+        // 模拟案例数据库
+        const mockCaseDatabase = [
+          {
+            title: 'S级汽车门店通过直播优化实现成交率提升30%',
+            summary: '该门店通过增加专职直播人员，优化直播内容策略，提升直播频次至每周5次，成功将线索成交率从2.2%提升至3.1%。',
+            keywords: ['汽车直播', '提高直播转化率'],
+            roi: '投入产出比提升40%'
+          },
+          {
+            title: '提升展厅客户体验，促进成交转化',
+            summary: '通过改善展厅接待流程，增加试乘试驾体验环节，优化产品展示方式，使到店转化率提升25%，客户满意度提高至92%。',
+            keywords: ['到店转化', '展厅销售', '客户体验'],
+            roi: '综合ROI提升2.3倍'
+          },
+          {
+            title: '优化销售话术，提高汽车销售成交率',
+            summary: '对销售团队进行系统化培训，建立标准化销售流程和话术体系，重点关注客户需求挖掘和痛点解决，使成交率提升28%。',
+            keywords: ['汽车销售', '提高成交率', '销售技巧'],
+            roi: '培训投入回报率达500%'
+          },
+          {
+            title: '汽车经销商新媒体团队建设最佳实践',
+            summary: '合理配置专职新媒体人员，明确职责分工，建立绩效激励机制，实现营销效率提升35%，线索量增长50%。',
+            keywords: ['汽车营销团队', '新媒体人员配置', '营销团队建设'],
+            roi: '人力成本优化15%，效果提升35%'
+          },
+          {
+            title: '汽车门店全渠道营销整合策略',
+            summary: '整合线上线下营销渠道，建立统一的客户管理系统，实现营销资源精准投放，ROI提升60%，获客成本降低25%。',
+            keywords: ['汽车门店运营优化', '汽车营销最佳实践'],
+            roi: '整体营销效率提升60%'
+          }
+        ];
+        
+        // 根据关键词匹配最相关的案例
+        const matchedCases = mockCaseDatabase
+          .filter(caseItem => 
+            uniqueKeywords.some(keyword => 
+              caseItem.title.includes(keyword) || 
+              caseItem.summary.includes(keyword) ||
+              caseItem.keywords.includes(keyword)
+            )
+          )
+          .slice(0, 3);
+        
+        const casesToDisplay = matchedCases.length > 0 ? matchedCases : [mockCaseDatabase[0]];
+        
+        // 显示搜索结果
+        let html = `
+          <div class="mb-3 text-sm text-gray-500">
+            <i class="fa fa-search mr-1"></i>基于搜索关键词：<span class="text-primary">${uniqueKeywords.join('、')}</span>
+          </div>
+          <div class="space-y-4">
+        `;
+        
+        casesToDisplay.forEach((caseItem, index) => {
+          html += `
+            <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+              <h5 class="font-medium text-primary mb-2">${index + 1}. ${caseItem.title}</h5>
+              <p class="text-sm text-gray-600 mb-2">${caseItem.summary}</p>
+              <div class="flex items-center text-xs text-success">
+                <i class="fa fa-line-chart mr-1"></i>
+                <span>${caseItem.roi}</span>
+              </div>
+            </div>
+          `;
+        });
+        
+        html += '</div>';
+        casesContainer.innerHTML = html;
+      }, 800);
+    }
+
+    // 10. 生成核心改善措施表格
+    function generateImprovementTable() {
+      const storeLevel = document.getElementById('storeLevel').value;
+      const 线索量 = parseFloat(document.getElementById('线索量').value) || 0;
+      const 到店量 = parseFloat(document.getElementById('到店量').value) || 0;
+      const 成交数量 = parseFloat(document.getElementById('成交数量').value) || 0;
+      const 直播线索占比 = parseFloat(document.getElementById('直播线索占比').value) || 0;
+      const 团队总人数 = parseFloat(document.getElementById('团队总人数').value) || 0;
+      const 专职人数 = parseFloat(document.getElementById('专职人数').value) || 0;
+      const 营销投入 = parseFloat(document.getElementById('营销投入').value) || 0;
+
+      // 计算未达标指标
+      const 到店率 = (到店量/线索量*100).toFixed(1);
+      const 线索成交率 = (成交数量/线索量*100).toFixed(1);
+      const 综合CPL = (营销投入*10000/线索量).toFixed(1);
+      const 专职占比 = (专职人数/团队总人数*100).toFixed(1);
+      const 行业平均CPL = { SS:60,S:80,A:100,B:120,C:150 }[storeLevel];
+
+      // 未达标指标的改善措施
+      const improvements = [];
+      // 线索成交率改善
+      if (线索成交率 < levelStandards.线索成交率[storeLevel]) {
+        improvements.push({
+          指标: '线索成交率',
+          当前值: `${线索成交率}%`,
+          标准值: `${levelStandards.线索成交率[storeLevel]}%`,
+          投入: 3,
+          动作: '1. 优化试驾流程，增加深度体验环节；2. 培训销售顾问竞品对比能力；3. 制定灵活议价权限',
+          效果: `预计提升至${levelStandards.线索成交率[storeLevel]}%以上`
+        });
+      }
+      // 直播线索占比改善
+      if (直播线索占比 < levelStandards.直播线索占比[storeLevel]) {
+        improvements.push({
+          指标: '直播线索占比',
+          当前值: `${直播线索占比}%`,
+          标准值: `${levelStandards.直播线索占比[storeLevel]}%`,
+          投入: 2.5,
+          动作: '1. 增加直播频次至每周4次；2. 设计直播专属福利；3. 培训主播互动留资技巧',
+          效果: `预计提升至${levelStandards.直播线索占比[storeLevel]}%以上`
+        });
+      }
+      // 专职占比改善
+      if (专职占比 < levelStandards.专职占比[storeLevel]) {
+        improvements.push({
+          指标: '专职人员占比',
+          当前值: `${专职占比}%`,
+          标准值: `${levelStandards.专职占比[storeLevel]}%`,
+          投入: 4,
+          动作: '1. 招聘2名专职新媒体运营；2. 提高专职岗位薪资竞争力；3. 制定专职人员考核激励机制',
+          效果: `预计提升至${levelStandards.专职占比[storeLevel]}%以上`
+        });
+      }
+      // 综合CPL改善
+      if (parseFloat(综合CPL) >= 行业平均CPL) {
+        improvements.push({
+          指标: '综合CPL',
+          当前值: `${综合CPL}元`,
+          标准值: `${行业平均CPL}元`,
+          投入: 2.5,
+          动作: '1. 分析各渠道获客成本，关停低效渠道；2. 优化高转化渠道投放比例；3. 提升线索质量筛选',
+          效果: `预计降低至${行业平均CPL - 10}元以下`
+        });
+      }
+
+      // 渲染表格
+      const tableEl = document.getElementById('roiModelTable');
+      if (improvements.length === 0) {
+        tableEl.innerHTML = `<tr><td colspan="4" class="px-4 py-8 text-center text-gray-500">所有核心指标均达标，建议维持现有策略并优化细节</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      improvements.forEach(item => {
+        html += `
+          <tr>
+            <td class="px-4 py-3 text-sm text-gray-900">
+              ${item.指标}<br>
+              <span class="text-xs text-gray-500">当前: ${item.当前值} 标准: ${item.标准值}</span>
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-500">${item.投入} 万元</td>
+            <td class="px-4 py-3 text-sm text-gray-600">${item.动作}</td>
+            <td class="px-4 py-3 text-sm text-primary">${item.效果}</td>
+          </tr>
+        `;
+      });
+      tableEl.innerHTML = html;
+    }
+
+    // 11. 生成随机数据
+    function setRandomData() {
+      // 根据门店等级生成合理范围的随机数据
+      const storeLevel = document.getElementById('storeLevel').value;
+      const baseMultiplier = { SS: 1.2, S: 1, A: 0.8, B: 0.6, C: 0.4 }[storeLevel];
+      
+      // 生成随机数据
+      const 线索量 = Math.floor(2000 + Math.random() * 3000 * baseMultiplier);
+      const 到店率 = (5 + Math.random() * 10 * baseMultiplier).toFixed(1);
+      const 到店量 = Math.floor(线索量 * 到店率 / 100);
+      const 成交率 = (1.5 + Math.random() * 5 * baseMultiplier).toFixed(1);
+      const 成交数量 = Math.floor(到店量 * 成交率 / 100);
+      const 成交金额 = (8 + Math.random() * 30 * baseMultiplier).toFixed(1);
+      const 营销投入 = (15 + Math.random() * 40 * baseMultiplier).toFixed(1);
+      const 直播线索占比 = (30 + Math.random() * 50 * baseMultiplier).toFixed(1);
+      const 直播转化率 = (1 + Math.random() * 3 * baseMultiplier).toFixed(1);
+      const 短视频CPL = (40 + Math.random() * 60 / baseMultiplier).toFixed(1);
+      const 私信留资率 = (15 + Math.random() * 30 * baseMultiplier).toFixed(1);
+      const 团队总人数 = Math.floor(3 + Math.random() * 8 * baseMultiplier);
+      const 专职人数 = Math.floor(1 + Math.random() * 6 * baseMultiplier);
+      
+      // 设置输入框值
+      document.getElementById('线索量').value = 线索量;
+      document.getElementById('到店量').value = 到店量;
+      document.getElementById('成交数量').value = 成交数量;
+      document.getElementById('成交金额').value = 成交金额;
+      document.getElementById('营销投入').value = 营销投入;
+      document.getElementById('直播线索占比').value = 直播线索占比;
+      document.getElementById('直播转化率').value = 直播转化率;
+      document.getElementById('短视频CPL').value = 短视频CPL;
+      document.getElementById('私信留资率').value = 私信留资率;
+      document.getElementById('团队总人数').value = 团队总人数;
+      document.getElementById('专职人数').value = 专职人数;
+      
+      // 更新概览
+      updateOverview();
+    }
+    
+    // 重置表单
+    function resetForm() {
+      // 重置输入框为空
+      const inputs = document.querySelectorAll('input[type="number"]');
+      inputs.forEach(input => {
+        input.value = '';
+      });
+      // 重新更新数据和图表
+      updateOverview();
+      // 隐藏报告
+      document.getElementById('reportSection').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
