@@ -1,16 +1,22 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-    <!-- 百度统计跟踪代码 -->
+<head>
+  <!-- 百度统计跟踪代码 -->
   <script>
     var _hmt = _hmt || [];
     (function() {
       var hm = document.createElement("script");
       hm.src = "https://hm.baidu.com/hm.js?e11a3132e08f99b985a1b568944a0151";
-      var s = document.getElementsByTagName("script")[0]; 
-      s.parentNode.insertBefore(hm, s);
+      try {
+        // 直接添加到head标签
+        if (document.head) {
+          document.head.appendChild(hm);
+        }
+      } catch (e) {
+        // 忽略错误，确保页面正常加载
+      }
     })();
   </script>
-<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>数据管理诊断平台</title>
@@ -1186,7 +1192,7 @@
       updateOverview();
     }
     
-    // 12. 重置表单
+    // 重置表单
     function resetForm() {
       // 重置输入框为空
       const inputs = document.querySelectorAll('input[type="number"]');
@@ -1200,19 +1206,4 @@
     }
   </script>
 </body>
-</html><script>var _hmt = _hmt || [];
-(function() {
-  var hm = document.createElement("script");
-  hm.src = "https://hm.baidu.com/hm.js?287e25f7b955725033511764caa1d3d9";
-  var s = document.getElementsByTagName("script")[0];
-  s.parentNode.insertBefore(hm, s);
-})();
-</script>
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-LJ6GL6Y84T"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag("js", new Date());
-  gtag("config", "G-LJ6GL6Y84T");
-</script>
 </html>
